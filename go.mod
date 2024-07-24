@@ -1,4 +1,4 @@
-module danielbukowski/rewrite-twitch-bot-back-end-in-go
+module github.com/danielbukowski/twitch-chatbot
 
 go 1.22.5
 
