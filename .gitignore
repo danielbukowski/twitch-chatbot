@@ -21,6 +21,11 @@
 go.work
 go.work.sum
 
-#env
-
+# Env files
 *.env
+
+# Auto generated garbage
+tmp
+
+# Secrets
+access_credentials.json
