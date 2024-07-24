@@ -4,35 +4,39 @@ import (
 	"fmt"
 	"os"
 
+	credentialstorage "github.com/danielbukowski/twitch-chatbot/internal/credential_storage"
 	"github.com/gempir/go-twitch-irc/v4"
 	"github.com/joho/godotenv"
+	"github.com/nicklaw5/helix/v2"
 )
 
 func main() {
-	err := godotenv.Load(".dev.env")
+	err := godotenv.Load("../../.dev.env")
 	if err != nil {
-		fmt.Println("Failed to load .dev.env file")
-		return
+		panic(err)
 	}
 
-	accessToken := os.Getenv("ACCESS_TOKEN")
+	accessCredentials, err := credentialstorage.RetrieveAccessCredentialsFromFile()
+	if err != nil {
+		panic(err)
+	}
+
 	chatbotName := os.Getenv("CHATBOT_NAME")
 	channelName := os.Getenv("CHANNEL_NAME")
 
-	client := twitch.NewClient(chatbotName, "oauth:"+accessToken)
+	ircClient := twitch.NewClient(chatbotName, "oauth:"+accessCredentials.AccessToken)
+	ircClient.Join(channelName)
 
-	client.Join(channelName)
-
-	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
+	ircClient.OnPrivateMessage(func(message twitch.PrivateMessage) {
 		fmt.Printf("Message from %s: %s\n", message.User.DisplayName, message.Message)
 	})
 
-	client.OnConnect(func() {
+	ircClient.OnConnect(func() {
 		fmt.Println("Connected to the chat")
-		client.Say(channelName, "peepoBlushCap")
+		ircClient.Say(channelName, "yo")
 	})
 
-	err = client.Connect()
+	err = ircClient.Connect()
 	if err != nil {
 		fmt.Println("Failed to connect to the IRC server", err.Error())
 	}
