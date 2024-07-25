@@ -22,3 +22,17 @@ func RetrieveAccessCredentialsFromFile() (helix.AccessCredentials, error) {
 
 	return accessCredentials, nil
 }
+
+func SaveAccessCredentialsToFile(accessCredentials helix.AccessCredentials) error {
+	json, err := json.Marshal(accessCredentials)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile("../../access_credentials.json", json, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
