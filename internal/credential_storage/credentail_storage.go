@@ -1,4 +1,4 @@
-package tokenfetcher
+package credentialstorage
 
 import (
 	"encoding/json"
@@ -29,7 +29,7 @@ func SaveAccessCredentialsToFile(accessCredentials helix.AccessCredentials) erro
 		return err
 	}
 
-	err = os.WriteFile("../../access_credentials.json", json, 0644)
+	err = os.WriteFile("../../access_credentials.json", json, 0600)
 	if err != nil {
 		return err
 	}

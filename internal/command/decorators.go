@@ -6,10 +6,10 @@ import (
 	"github.com/gempir/go-twitch-irc/v4"
 )
 
-var errNoPermissions error = errors.New("called a command without a needed role")
+var errNoPermissions = errors.New("called a command without a needed role")
 
 // Available twitch badges:
-// ["broadcaster", "moderator", "subscriber", "artist-badge", "founder", "vip", "sub-gifter", "bits", "partner", "staff"]
+// ["broadcaster", "moderator", "subscriber", "artist-badge", "founder", "vip", "sub-gifter", "bits", "partner", "staff"].
 func hasBadge(badgeName string, badges map[string]int) bool {
 	return badges[badgeName] != 0
 }
