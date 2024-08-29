@@ -1,0 +1,19 @@
+linters:
+  enable:
+  - errcheck
+  - gofmt
+  - govet
+  - staticcheck
+  - gosimple
+  - ineffassign
+  - unused
+  - gosec
+  - bodyclose
+  - gocyclo
+  - gocognit
+  - gocritic
+  - godot
+  - prealloc
+  - revive
+run:
+  tests: false

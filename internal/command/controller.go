@@ -10,23 +10,23 @@ import (
 
 type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error
 
-type controller struct {
+type Controller struct {
 	commands map[string]CallbackSignature
 	prefix   string
 }
 
-func NewController() *controller {
-	return &controller{
+func NewController() *Controller {
+	return &Controller{
 		commands: make(map[string]CallbackSignature),
 		prefix:   "!",
 	}
 }
 
-func (c controller) Prefix() string {
+func (c Controller) Prefix() string {
 	return c.prefix
 }
 
-func (c *controller) CallCommand(userMessage string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) {
+func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
 
@@ -46,6 +46,6 @@ func (c *controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 	}
 }
 
-func (cc *controller) AddCommand(commandName string, cb CallbackSignature) {
-	cc.commands[commandName] = cb
+func (c *Controller) AddCommand(commandName string, cb CallbackSignature) {
+	c.commands[commandName] = cb
 }
