@@ -21,11 +21,15 @@
 go.work
 go.work.sum
 
-# Env files
+# Enviroment files
 *.env
 
-# Auto generated garbage
+# Go build generated logs and .exe files
 tmp
 
-# Secrets
-access_credentials.json
+# Files from code-editors
+.idea
+.vscode
+
+# Database files
+*.db
