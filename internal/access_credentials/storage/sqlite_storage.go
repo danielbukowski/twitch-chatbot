@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/nicklaw5/helix/v2"
 )
 

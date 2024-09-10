@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/cipher"
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
 	"github.com/danielbukowski/twitch-chatbot/internal/command"
