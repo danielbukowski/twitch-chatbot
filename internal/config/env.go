@@ -14,6 +14,8 @@ type Config struct {
 	TwitchChannelName       string
 	CipherPassphrase        string
 	TwitchOAUTH2RedirectURI string
+	DatabaseUsername        string
+	DatabasePassword        string
 }
 
 func New(isDevEnv bool) (*Config, error) {
@@ -33,7 +35,9 @@ func New(isDevEnv bool) (*Config, error) {
 		TwitchClientSecret:      os.Getenv("TWITCH_CLIENT_SECRET"),
 		TwitchChatbotName:       os.Getenv("TWITCH_CHATBOT_NAME"),
 		TwitchChannelName:       os.Getenv("TWITCH_CHANNEL_NAME"),
-		CipherPassphrase:        os.Getenv("CIPHER_PASSPHRASE"),
 		TwitchOAUTH2RedirectURI: os.Getenv("TWITCH_OAUTH2_REDIRECT_URI"),
+		CipherPassphrase:        os.Getenv("CIPHER_PASSPHRASE"),
+		DatabaseUsername:        os.Getenv("DATABASE_USERNAME"),
+		DatabasePassword:        os.Getenv("DATABASE_PASSWORD"),
 	}, nil
 }

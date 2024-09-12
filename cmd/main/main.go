@@ -34,7 +34,7 @@ func main() {
 		panic(err)
 	}
 
-	accessCredentialsStorage, err := storage.NewSQLiteStorage("./db/database.db", accessCredentialsCipher)
+	accessCredentialsStorage, err := storage.NewSQLiteStorage("file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher)
 	if err != nil {
 		panic(err)
 	}

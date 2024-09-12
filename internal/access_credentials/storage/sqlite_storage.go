@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/nicklaw5/helix/v2"
@@ -21,8 +22,8 @@ type SQLiteStorage struct {
 	accessCredentialsCipher accessCredentialsCipher
 }
 
-func NewSQLiteStorage(dataSourceName string, accessCredentialsCipher accessCredentialsCipher) (*SQLiteStorage, error) {
-	db, err := sql.Open("sqlite3", dataSourceName)
+func NewSQLiteStorage(dataSourceName, username, password string, accessCredentialsCipher accessCredentialsCipher) (*SQLiteStorage, error) {
+	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=SHA384", dataSourceName, username, password))
 	if err != nil {
 		return nil, err
 	}
