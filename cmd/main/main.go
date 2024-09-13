@@ -42,7 +42,7 @@ func main() {
 	helixClient, err := helix.NewClient(&helix.Options{
 		ClientID:     config.TwitchClientID,
 		ClientSecret: config.TwitchClientSecret,
-		RedirectURI:  config.TwitchOAUTH2RedirectURI,
+		RedirectURI:  config.TwitchOAuth2RedirectURI,
 	})
 	if err != nil {
 		panic(err)
