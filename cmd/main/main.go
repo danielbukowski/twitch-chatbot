@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 
-	if len(*code) != 0 {
+	if *isDevEnv && len(*code) != 0 {
 		fmt.Println("exchanging authorization code for access credentials...")
 
 		resp, err := helixClient.RequestUserAccessToken(*code)
