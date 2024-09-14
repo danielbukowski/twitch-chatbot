@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -31,13 +32,22 @@ func New(isDevEnv bool) (*Config, error) {
 	}
 
 	return &Config{
-		TwitchClientID:          os.Getenv("TWITCH_CLIENT_ID"),
-		TwitchClientSecret:      os.Getenv("TWITCH_CLIENT_SECRET"),
-		TwitchChatbotName:       os.Getenv("TWITCH_CHATBOT_NAME"),
-		TwitchChannelName:       os.Getenv("TWITCH_CHANNEL_NAME"),
-		TwitchOAuth2RedirectURI: os.Getenv("TWITCH_OAUTH2_REDIRECT_URI"),
-		CipherPassphrase:        os.Getenv("CIPHER_PASSPHRASE"),
-		DatabaseUsername:        os.Getenv("DATABASE_USERNAME"),
-		DatabasePassword:        os.Getenv("DATABASE_PASSWORD"),
+		TwitchClientID:          getEnv("TWITCH_CLIENT_ID"),
+		TwitchClientSecret:      getEnv("TWITCH_CLIENT_SECRET"),
+		TwitchChatbotName:       getEnv("TWITCH_CHATBOT_NAME"),
+		TwitchChannelName:       getEnv("TWITCH_CHANNEL_NAME"),
+		TwitchOAuth2RedirectURI: getEnv("TWITCH_OAUTH2_REDIRECT_URI"),
+		CipherPassphrase:        getEnv("CIPHER_PASSPHRASE"),
+		DatabaseUsername:        getEnv("DATABASE_USERNAME"),
+		DatabasePassword:        getEnv("DATABASE_PASSWORD"),
 	}, nil
+}
+
+func getEnv(name string) string {
+	env := os.Getenv(name)
+	if len(env) == 0 {
+		panic(fmt.Sprintf("environment variable called '%s' is missing", name))
+	}
+
+	return env
 }
