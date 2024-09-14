@@ -30,6 +30,7 @@ func main() {
 		panic(err)
 	}
 
+	//nolint:errcheck
 	defer logger.Sync()
 
 	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
