@@ -22,8 +22,16 @@ type SQLiteStorage struct {
 	accessCredentialsCipher accessCredentialsCipher
 }
 
-func NewSQLiteStorage(dataSourceName, username, password string, accessCredentialsCipher accessCredentialsCipher) (*SQLiteStorage, error) {
+func NewSQLiteStorage(ctx context.Context, dataSourceName, username, password string, accessCredentialsCipher accessCredentialsCipher) (*SQLiteStorage, error) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=SHA384", dataSourceName, username, password))
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
+	defer cancel()
+
+	err = db.PingContext(ctx)
 	if err != nil {
 		return nil, err
 	}
