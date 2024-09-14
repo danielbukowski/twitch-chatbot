@@ -44,7 +44,7 @@ func main() {
 		logger.Panic("failed to create AES cipher", zap.Error(err))
 	}
 
-	accessCredentialsStorage, err := storage.NewSQLiteStorage(ctx, "file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher)
+	accessCredentialsStorage, err := storage.NewSQLiteStorage(ctx, "file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher, logger)
 	if err != nil {
 		logger.Panic("failed to establish a connection to SQLite", zap.Error(err))
 	}
