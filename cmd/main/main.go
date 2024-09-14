@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -13,8 +12,10 @@ import (
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
 	"github.com/danielbukowski/twitch-chatbot/internal/command"
 	"github.com/danielbukowski/twitch-chatbot/internal/config"
+	"github.com/danielbukowski/twitch-chatbot/internal/logger"
 	"github.com/gempir/go-twitch-irc/v4"
 	"github.com/nicklaw5/helix/v2"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -24,19 +25,28 @@ func main() {
 	code := flag.String("code", "", "twitch authorization code to get access credentials")
 	flag.Parse()
 
-	config, err := config.New(*isDevEnv)
+	logger, err := logger.New(*isDevEnv)
 	if err != nil {
 		panic(err)
+	}
+
+	defer logger.Sync()
+
+	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
+
+	config, err := config.New(*isDevEnv)
+	if err != nil {
+		logger.Panic("failed to initialize config", zap.Error(err))
 	}
 
 	accessCredentialsCipher, err := cipher.NewAESCipher(config.CipherPassphrase, 24)
 	if err != nil {
-		panic(err)
+		logger.Panic("failed to create AES cipher", zap.Error(err))
 	}
 
 	accessCredentialsStorage, err := storage.NewSQLiteStorage("file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher)
 	if err != nil {
-		panic(err)
+		logger.Panic("failed to establish a connection to SQLite", zap.Error(err))
 	}
 
 	helixClient, err := helix.NewClient(&helix.Options{
@@ -49,24 +59,24 @@ func main() {
 	}
 
 	if *isDevEnv && len(*code) != 0 {
-		fmt.Println("exchanging authorization code for access credentials...")
+		logger.Info("exchanging authorization code for access credentials...")
 
 		resp, err := helixClient.RequestUserAccessToken(*code)
 		if err != nil || resp.StatusCode != 200 {
-			panic(errors.Join(errors.New("failed to exchange the code for access credentials"), err))
+			logger.Panic("failed to exchange the code for access credentials", zap.Error(err))
 		}
 
 		err = accessCredentialsStorage.Save(ctx, resp.Data, config.TwitchChannelName)
 		if err != nil {
-			panic(errors.Join(errors.New("failed to save the exchanged access credentials to database"), err))
+			logger.Panic("failed to save the exchanged access credentials to database", zap.Error(err))
 		}
 
-		fmt.Println("successfully exchanged and saved access credentials!")
+		logger.Info("successfully exchanged and saved access credentials!")
 	}
 
 	accessCredentials, err := accessCredentialsStorage.Retrieve(ctx, config.TwitchChannelName)
 	if err != nil {
-		panic(err)
+		logger.Panic("failed to retrieve access credentials from database", zap.Error(err))
 	}
 
 	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
@@ -90,31 +100,31 @@ func main() {
 	})
 
 	ircClient.OnConnect(func() {
-		fmt.Println("Connected to the chat!")
+		logger.Info("connected to the twitch chat!")
 	})
 
 	if isAccessTokenValid, _, err := helixClient.ValidateToken(accessCredentials.AccessToken); !isAccessTokenValid && err == nil {
-		fmt.Println("access credentials are expired")
+		logger.Info("access credentials have expired")
 
 		resp, err := helixClient.RefreshUserAccessToken(accessCredentials.RefreshToken)
 		if err != nil || resp.StatusCode != 200 {
-			panic(errors.Join(errors.New("failed to refresh access credentials"), err))
+			logger.Panic("failed to refresh access credentials", zap.Error(err))
 		}
 
-		fmt.Println("refreshed access credentials")
+		logger.Info("refreshed access credentials")
 
 		err = accessCredentialsStorage.Update(ctx, resp.Data, config.TwitchChannelName)
 		if err != nil {
-			panic(err)
+			logger.Panic("failed to update access credentials", zap.Error(err))
 		}
 
-		fmt.Println("saved new access credentials to database")
+		logger.Info("saved new access credentials to database")
 
 		ircClient.SetIRCToken(fmt.Sprintf("oauth:%s", resp.Data.AccessToken))
 	}
 
 	err = ircClient.Connect()
 	if err != nil {
-		panic(errors.Join(errors.New("failed to connect to the IRC server"), err))
+		logger.Panic("failed to connect to the IRC server", zap.Error(err))
 	}
 }

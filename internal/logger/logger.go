@@ -1,0 +1,37 @@
+package logger
+
+import (
+	"os"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+func New(isDev bool) (*zap.Logger, error) {
+	if !isDev {
+		config := zap.NewProductionConfig()
+
+		logger, err := config.Build()
+		if err != nil {
+			return nil, err
+		}
+
+		return logger, nil
+	}
+
+	err := os.MkdirAll("./tmp/logs", 0555)
+	if err != nil && os.IsNotExist(err) {
+		panic(err)
+	}
+
+	config := zap.NewDevelopmentConfig()
+	config.OutputPaths = append(config.OutputPaths, "./tmp/logs/app.log")
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	logger, err := config.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return logger, nil
+}
