@@ -1,47 +1,94 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
-	"os"
 	"strings"
 
+	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/cipher"
+	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
 	"github.com/danielbukowski/twitch-chatbot/internal/command"
-	credentialstorage "github.com/danielbukowski/twitch-chatbot/internal/credential_storage"
+	"github.com/danielbukowski/twitch-chatbot/internal/config"
+	"github.com/danielbukowski/twitch-chatbot/internal/logger"
 	"github.com/gempir/go-twitch-irc/v4"
-	"github.com/joho/godotenv"
 	"github.com/nicklaw5/helix/v2"
+	"go.uber.org/zap"
 )
 
 func main() {
-	err := godotenv.Load("../../.dev.env")
+	ctx := context.Background()
+
+	isDevEnv := flag.Bool("dev", false, "development environment check")
+	code := flag.String("code", "", "twitch authorization code to get access credentials")
+	flag.Parse()
+
+	logger, err := logger.New(*isDevEnv)
 	if err != nil {
 		panic(err)
 	}
 
-	accessCredentials, err := credentialstorage.RetrieveAccessCredentialsFromFile()
+	//nolint:errcheck
+	defer logger.Sync()
+
+	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
+
+	config, err := config.New(*isDevEnv)
 	if err != nil {
-		panic(err)
+		logger.Panic("failed to initialize config", zap.Error(err))
+	}
+
+	accessCredentialsCipher, err := cipher.NewAESCipher(config.CipherPassphrase, 24)
+	if err != nil {
+		logger.Panic("failed to create AES cipher", zap.Error(err))
+	}
+
+	accessCredentialsStorage, err := storage.NewSQLiteStorage(ctx, "file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher, logger)
+	if err != nil {
+		logger.Panic("failed to establish a connection to SQLite", zap.Error(err))
 	}
 
 	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID:     os.Getenv("TWITCH_CLIENT_ID"),
-		ClientSecret: os.Getenv("TWITCH_CLIENT_SECRET"),
+		ClientID:     config.TwitchClientID,
+		ClientSecret: config.TwitchClientSecret,
+		RedirectURI:  config.TwitchOAuth2RedirectURI,
 	})
-
 	if err != nil {
 		panic(err)
 	}
 
-	chatbotName := os.Getenv("CHATBOT_NAME")
-	channelName := os.Getenv("CHANNEL_NAME")
+	if *isDevEnv && len(*code) != 0 {
+		logger.Info("exchanging authorization code for access credentials...")
 
-	ircClient := twitch.NewClient(chatbotName, "oauth:"+accessCredentials.AccessToken)
-	ircClient.Join(channelName)
+		resp, err := helixClient.RequestUserAccessToken(*code)
+		if err != nil || resp.StatusCode != 200 {
+			logger.Panic("failed to exchange the code for access credentials", zap.Error(err))
+		}
+
+		err = accessCredentialsStorage.Save(ctx, resp.Data, config.TwitchChannelName)
+		if err != nil {
+			logger.Panic("failed to save the exchanged access credentials to database", zap.Error(err))
+		}
+
+		logger.Info("successfully exchanged and saved access credentials!")
+	}
+
+	accessCredentials, err := accessCredentialsStorage.Retrieve(ctx, config.TwitchChannelName)
+	if err != nil {
+		logger.Panic("failed to retrieve access credentials from database", zap.Error(err))
+	}
+
+	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
+	ircClient.Join(config.TwitchChannelName)
 
 	commandController := command.NewController()
 	commandPrefix := commandController.Prefix()
 
-	commandController.AddCommand(commandPrefix+"ping", command.Ping)
+	if *isDevEnv {
+		commandController.AddCommand(commandPrefix+"ping", command.Ping)
+	}
 
 	ircClient.OnPrivateMessage(func(privateMessage twitch.PrivateMessage) {
 		userMessage := privateMessage.Message
@@ -54,32 +101,31 @@ func main() {
 	})
 
 	ircClient.OnConnect(func() {
-		fmt.Println("Connected to the chat")
-		ircClient.Say(channelName, "yo")
+		logger.Info("connected to the twitch chat!")
 	})
+
+	if isAccessTokenValid, _, err := helixClient.ValidateToken(accessCredentials.AccessToken); !isAccessTokenValid && err == nil {
+		logger.Info("access credentials have expired")
+
+		resp, err := helixClient.RefreshUserAccessToken(accessCredentials.RefreshToken)
+		if err != nil || resp.StatusCode != 200 {
+			logger.Panic("failed to refresh access credentials", zap.Error(err))
+		}
+
+		logger.Info("refreshed access credentials")
+
+		err = accessCredentialsStorage.Update(ctx, resp.Data, config.TwitchChannelName)
+		if err != nil {
+			logger.Panic("failed to update access credentials", zap.Error(err))
+		}
+
+		logger.Info("saved new access credentials to database")
+
+		ircClient.SetIRCToken(fmt.Sprintf("oauth:%s", resp.Data.AccessToken))
+	}
 
 	err = ircClient.Connect()
 	if err != nil {
-		fmt.Println("Failed to connect to the IRC server:", err.Error())
-
-		if isAccessTokenValid, _, err := helixClient.ValidateToken(accessCredentials.AccessToken); !isAccessTokenValid && err == nil {
-			fmt.Println("Trying to refresh the access token...")
-			resp, err := helixClient.RefreshUserAccessToken(accessCredentials.RefreshToken)
-
-			if err != nil || resp.StatusCode != 200 {
-				fmt.Println("Failed to refresh the access token")
-				os.Exit(1)
-			}
-
-			fmt.Println("Refreshed the access token!")
-
-			err = credentialstorage.SaveAccessCredentialsToFile(resp.Data)
-			if err != nil {
-				fmt.Println("Failed to save the access token to a file")
-				panic(err)
-			}
-
-			fmt.Println("Successfully saved the access token! Restart the application")
-		}
+		logger.Panic("failed to connect to the IRC server", zap.Error(err))
 	}
 }
