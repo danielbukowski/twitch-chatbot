@@ -30,8 +30,8 @@ func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
 
-	command := c.commands[commandName]
-	if command == nil {
+	command, ok := c.commands[commandName]
+	if !ok {
 		return
 	}
 
