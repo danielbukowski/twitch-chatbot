@@ -2,10 +2,10 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v4"
+	"go.uber.org/zap"
 )
 
 type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error
@@ -18,12 +18,14 @@ type chatClient interface {
 }
 
 type Controller struct {
+	logger   *zap.Logger
 	commands map[string]CallbackSignature
 	prefix   string
 }
 
-func NewController() *Controller {
+func NewController(logger *zap.Logger) *Controller {
 	return &Controller{
+		logger:   logger,
 		commands: make(map[string]CallbackSignature),
 		prefix:   "!",
 	}
@@ -49,7 +51,7 @@ func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 			return
 		}
 
-		fmt.Println("An unhandled error occurred: ", err.Error())
+		c.logger.Error("An unhandled error occurred", zap.Error(err))
 	}
 }
 
