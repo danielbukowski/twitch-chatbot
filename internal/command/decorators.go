@@ -15,10 +15,10 @@ func hasBadge(badgeName string, badges map[string]int) bool {
 }
 
 func HasRole(roles []string, cb CallbackSignature) CallbackSignature {
-	return func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error {
+	return func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error {
 		for _, roleName := range roles {
 			if hasBadge(roleName, privateMessage.User.Badges) {
-				return cb(args, privateMessage, ircClient)
+				return cb(args, privateMessage, chatClient)
 			}
 		}
 

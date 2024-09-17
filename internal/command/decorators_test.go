@@ -19,7 +19,7 @@ func TestHasRole(t *testing.T) {
 			},
 		}
 		ircClient := &twitch.Client{}
-		cb := func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error {
+		cb := func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error {
 			return nil
 		}
 		var expected error = errNoPermissions
@@ -46,7 +46,7 @@ func TestHasRole(t *testing.T) {
 			},
 		}
 		ircClient := &twitch.Client{}
-		cb := func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error {
+		cb := func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error {
 			return nil
 		}
 		var expected error = nil

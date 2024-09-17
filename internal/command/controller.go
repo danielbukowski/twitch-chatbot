@@ -8,7 +8,14 @@ import (
 	"github.com/gempir/go-twitch-irc/v4"
 )
 
-type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error
+type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error
+
+type chatClient interface {
+	Say(channelName, message string)
+	Reply(channelName, parentMessageID, message string)
+	Join(channels ...string)
+	Depart(channelName string)
+}
 
 type Controller struct {
 	commands map[string]CallbackSignature
@@ -26,7 +33,7 @@ func (c Controller) Prefix() string {
 	return c.prefix
 }
 
-func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) {
+func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
 
@@ -35,7 +42,7 @@ func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 		return
 	}
 
-	err := command(args[1:], privateMessage, ircClient)
+	err := command(args[1:], privateMessage, chatClient)
 
 	if err != nil {
 		if errors.Is(err, errNoPermissions) {
