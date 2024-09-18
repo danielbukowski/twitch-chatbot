@@ -10,6 +10,8 @@ import (
 
 type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error
 
+type Filter func(CallbackSignature) CallbackSignature
+
 type chatClient interface {
 	Say(channelName, message string)
 	Reply(channelName, parentMessageID, message string)
@@ -55,6 +57,10 @@ func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 	}
 }
 
-func (c *Controller) AddCommand(commandName string, cb CallbackSignature) {
+func (c *Controller) AddCommand(commandName string, cb CallbackSignature, filters []Filter) {
+	for i := len(filters) - 1; i >= 0; i-- {
+		cb = filters[i](cb)
+	}
+
 	c.commands[commandName] = cb
 }

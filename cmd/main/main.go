@@ -87,7 +87,7 @@ func main() {
 	commandPrefix := commandController.Prefix()
 
 	if *isDevEnv {
-		commandController.AddCommand(commandPrefix+"ping", command.Ping)
+		commandController.AddCommand(commandPrefix+"ping", command.Ping, []command.Filter{})
 	}
 
 	ircClient.OnPrivateMessage(func(privateMessage twitch.PrivateMessage) {
