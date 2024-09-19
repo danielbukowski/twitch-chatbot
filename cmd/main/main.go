@@ -83,7 +83,7 @@ func main() {
 	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
 	ircClient.Join(config.TwitchChannelName)
 
-	commandController := command.NewController(logger)
+	commandController := command.NewController("!", logger)
 	commandPrefix := commandController.Prefix()
 
 	if *isDevEnv {

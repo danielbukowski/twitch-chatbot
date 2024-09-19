@@ -25,11 +25,11 @@ type Controller struct {
 	prefix   string
 }
 
-func NewController(logger *zap.Logger) *Controller {
+func NewController(prefix string, logger *zap.Logger) *Controller {
 	return &Controller{
 		logger:   logger,
 		commands: make(map[string]CallbackSignature),
-		prefix:   "!",
+		prefix:   prefix,
 	}
 }
 
