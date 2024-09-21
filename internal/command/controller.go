@@ -1,14 +1,14 @@
 package command
 
 import (
-	"errors"
+	"context"
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v4"
 	"go.uber.org/zap"
 )
 
-type CallbackSignature func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error
+type CallbackSignature func(ctx context.Context, args []string, chatClient chatClient) error
 
 type Filter func(CallbackSignature) CallbackSignature
 
