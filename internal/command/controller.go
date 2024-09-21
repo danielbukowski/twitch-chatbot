@@ -19,10 +19,13 @@ type chatClient interface {
 	Depart(channelName string)
 }
 
+type Middleware func(CallbackSignature) CallbackSignature
+
 type Controller struct {
-	logger   *zap.Logger
-	commands map[string]CallbackSignature
-	prefix   string
+	logger      *zap.Logger
+	commands    map[string]CallbackSignature
+	middlewares []Middleware
+	prefix      string
 }
 
 func NewController(prefix string, logger *zap.Logger) *Controller {
@@ -52,10 +55,17 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 	command(ctx, args[1:], chatClient)
 }
 
+func (c *Controller) UseWith(middleware Middleware) {
+	c.middlewares = append(c.middlewares, middleware)
+}
 
 func (c *Controller) AddCommand(commandName string, cb CallbackSignature, filters []Filter) {
 	for i := len(filters) - 1; i >= 0; i-- {
 		cb = filters[i](cb)
+	}
+
+	for i := len(c.middlewares) - 1; i >= 0; i-- {
+		cb = c.middlewares[i](cb)
 	}
 
 	c.commands[commandName] = cb
