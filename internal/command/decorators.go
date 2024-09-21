@@ -1,9 +1,8 @@
 package command
 
 import (
+	"context"
 	"errors"
-
-	"github.com/gempir/go-twitch-irc/v4"
 )
 
 var errNoPermissions = errors.New("called a command without a needed role")
@@ -15,10 +14,13 @@ func hasBadge(badgeName string, badges map[string]int) bool {
 }
 
 func HasRole(roles []string, cb CallbackSignature) CallbackSignature {
-	return func(args []string, privateMessage *twitch.PrivateMessage, chatClient chatClient) error {
+	return func(ctx context.Context, args []string, chatClient chatClient) error {
+
+		privMsg := GetPrivateMessageFromContext(ctx)
+
 		for _, roleName := range roles {
-			if hasBadge(roleName, privateMessage.User.Badges) {
-				return cb(args, privateMessage, chatClient)
+			if hasBadge(roleName, privMsg.User.Badges) {
+				return cb(ctx, args, chatClient)
 			}
 		}
 
