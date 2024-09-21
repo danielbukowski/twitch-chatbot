@@ -37,7 +37,7 @@ func (c Controller) Prefix() string {
 	return c.prefix
 }
 
-func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.PrivateMessage, chatClient chatClient) {
+func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
 
@@ -46,16 +46,12 @@ func (c *Controller) CallCommand(userMessage string, privateMessage *twitch.Priv
 		return
 	}
 
-	err := command(args[1:], privateMessage, chatClient)
+	ctx = setPrivateMessageToContext(ctx, &privateMessage)
 
-	if err != nil {
-		if errors.Is(err, errNoPermissions) {
-			return
-		}
-
-		c.logger.Error("An unhandled error occurred", zap.Error(err))
-	}
+	//nolint:errcheck // error is handled in a Middleware called ErrorHandler
+	command(ctx, args[1:], chatClient)
 }
+
 
 func (c *Controller) AddCommand(commandName string, cb CallbackSignature, filters []Filter) {
 	for i := len(filters) - 1; i >= 0; i-- {

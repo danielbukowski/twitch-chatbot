@@ -97,7 +97,7 @@ func main() {
 			return
 		}
 
-		commandController.CallCommand(userMessage, &privateMessage, ircClient)
+		commandController.CallCommand(ctx, userMessage, privateMessage, ircClient)
 	})
 
 	ircClient.OnConnect(func() {
