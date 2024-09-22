@@ -13,7 +13,7 @@ func hasBadge(badgeName string, badges map[string]int) bool {
 	return badges[badgeName] != 0
 }
 
-func HasRole(roles []string, cb CallbackSignature) CallbackSignature {
+func HasRole(roles []string, cb Handler) Handler {
 	return func(ctx context.Context, args []string, chatClient chatClient) error {
 
 		privMsg := GetPrivateMessageFromContext(ctx)
