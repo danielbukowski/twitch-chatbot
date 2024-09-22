@@ -8,7 +8,7 @@ import (
 )
 
 func ErrorHandler(logger *zap.Logger) Middleware {
-	return func(cb CallbackSignature) CallbackSignature {
+	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {
 
 			err := cb(ctx, args, chatClient)

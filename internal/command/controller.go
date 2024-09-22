@@ -8,11 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// CallbackSignature represents a signature for a Command.
-type CallbackSignature func(ctx context.Context, args []string, chatClient chatClient) error
+// Handler is a function that represents a command.
+type Handler func(ctx context.Context, args []string, chatClient chatClient) error
 
-// Filter represents a function that is called before a Command, but not after any Middleware. It is used for validation.
-type Filter func(CallbackSignature) CallbackSignature
+// Filter represents a function that is called after all middlewares and before a command. It is used for validation.
+type Filter func(Handler) Handler
 
 // ChatClient provides an interface to Twitch IRC chat with functions to interact with it.
 type chatClient interface {
@@ -24,21 +24,21 @@ type chatClient interface {
 
 // Middleware represents a function that is called before any Filters or Commands.
 // It can be used for logging Command's parameters, error handling or measure how much time a command took to execute.
-type Middleware func(CallbackSignature) CallbackSignature
+type Middleware func(Handler) Handler
 
 // Controller represents a manager to Commands.
 type Controller struct {
-	logger      *zap.Logger                  // Logger is just self explanatory, it's used for logging.
-	commands    map[string]CallbackSignature // Commands is a map that stores commands, that are wrapped with Middlewares and Filters.
-	middlewares []Middleware                 // Middlewares represents a list of functions that are added to each commands before any Filter.
-	prefix      string                       // Prefix is a string that is added before any Commands.
+	logger      *zap.Logger        // Logger is just self explanatory, it's used for logging.
+	commands    map[string]Handler // Commands is a map that stores commands, that are wrapped with Middlewares and Filters.
+	middlewares []Middleware       // Middlewares represents a list of functions that are added to each commands before any Filter.
+	prefix      string             // Prefix is a string that is added before any Commands.
 }
 
 // NewController creates an instance of Controller for managing Commands.
 func NewController(prefix string, logger *zap.Logger) *Controller {
 	return &Controller{
 		logger:   logger,
-		commands: make(map[string]CallbackSignature),
+		commands: make(map[string]Handler),
 		prefix:   prefix,
 	}
 }
@@ -48,7 +48,7 @@ func (c Controller) Prefix() string {
 	return c.prefix
 }
 
-// CallCommand finds a command and execute it, if find one.
+// CallCommand searches for a command and execute it, if find one.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
@@ -64,21 +64,21 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 	command(ctx, args[1:], chatClient)
 }
 
-// UseWith adds a Middleware to a Middlewares. The order when a Middleware is added matters.
+// UseWith adds a middleware to a middlewares. The order when a middleware is added matters.
 func (c *Controller) UseWith(middleware Middleware) {
 	c.middlewares = append(c.middlewares, middleware)
 }
 
-// AddCommand adds a Command to a map in Controller. Command is being wrapped with Filters and Middlewares, before adding to a map.
-// The order of calling goes like this: Middlewares -> Filters -> Command.
-func (c *Controller) AddCommand(commandName string, cb CallbackSignature, filters []Filter) {
+// AddCommand adds a command handler to a map in Controller. The Handle is being wrapped with filters and middlewares, before adding to a map.
+// The order of calling goes like this: Middlewares -> Filters -> Handler.
+func (c *Controller) AddCommand(commandName string, handler Handler, filters []Filter) {
 	for i := len(filters) - 1; i >= 0; i-- {
-		cb = filters[i](cb)
+		handler = filters[i](handler)
 	}
 
 	for i := len(c.middlewares) - 1; i >= 0; i-- {
-		cb = c.middlewares[i](cb)
+		handler = c.middlewares[i](handler)
 	}
 
-	c.commands[commandName] = cb
+	c.commands[commandName] = handler
 }
