@@ -8,26 +8,33 @@ import (
 	"go.uber.org/zap"
 )
 
+// CallbackSignature represents a signature for a Command.
 type CallbackSignature func(ctx context.Context, args []string, chatClient chatClient) error
 
+// Filter represents a function that is called before a Command, but not after any Middleware. It is used for validation.
 type Filter func(CallbackSignature) CallbackSignature
 
+// ChatClient provides an interface to Twitch IRC chat with functions to interact with it.
 type chatClient interface {
-	Say(channelName, message string)
-	Reply(channelName, parentMessageID, message string)
-	Join(channels ...string)
-	Depart(channelName string)
+	Say(channelName, message string)                    // Say is function for sending messages to a twitch chat.
+	Reply(channelName, parentMessageID, message string) // Reply is a function that replies to a thread.
+	Join(channels ...string)                            // Join is a function that allows to join to a channel or channels.
+	Depart(channelName string)                          // Depart is a function that allows to leave from a channel.
 }
 
+// Middleware represents a function that is called before any Filters or Commands.
+// It can be used for logging Command's parameters, error handling or measure how much time a command took to execute.
 type Middleware func(CallbackSignature) CallbackSignature
 
+// Controller represents a manager to Commands.
 type Controller struct {
-	logger      *zap.Logger
-	commands    map[string]CallbackSignature
-	middlewares []Middleware
-	prefix      string
+	logger      *zap.Logger                  // Logger is just self explanatory, it's used for logging.
+	commands    map[string]CallbackSignature // Commands is a map that stores commands, that are wrapped with Middlewares and Filters.
+	middlewares []Middleware                 // Middlewares represents a list of functions that are added to each commands before any Filter.
+	prefix      string                       // Prefix is a string that is added before any Commands.
 }
 
+// NewController creates an instance of Controller for managing Commands.
 func NewController(prefix string, logger *zap.Logger) *Controller {
 	return &Controller{
 		logger:   logger,
@@ -36,10 +43,12 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 	}
 }
 
+// Prefix returns a prefix that is added before any command.
 func (c Controller) Prefix() string {
 	return c.prefix
 }
 
+// CallCommand finds a command and execute it, if find one.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
@@ -55,10 +64,13 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 	command(ctx, args[1:], chatClient)
 }
 
+// UseWith adds a Middleware to a Middlewares. The order when a Middleware is added matters.
 func (c *Controller) UseWith(middleware Middleware) {
 	c.middlewares = append(c.middlewares, middleware)
 }
 
+// AddCommand adds a Command to a map in Controller. Command is being wrapped with Filters and Middlewares, before adding to a map.
+// The order of calling goes like this: Middlewares -> Filters -> Command.
 func (c *Controller) AddCommand(commandName string, cb CallbackSignature, filters []Filter) {
 	for i := len(filters) - 1; i >= 0; i-- {
 		cb = filters[i](cb)
