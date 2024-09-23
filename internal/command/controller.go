@@ -8,13 +8,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// Handler is a function that represents a command.
+// Handler represents a function for a command.
 type Handler func(ctx context.Context, args []string, chatClient chatClient) error
 
 // Filter represents a function that is called after all middlewares and before a command. It is used for validation.
 type Filter func(Handler) Handler
 
-// ChatClient provides an interface to Twitch IRC chat with functions to interact with it.
+// Middleware represents a function that is called before any filters and a handler.
+// It can be used for logging handler's parameters, error handling or measure how much time a command took to execute.
+type Middleware func(Handler) Handler
+
+// ChatClient provides an interface to interact with Twitch IRC.
 type chatClient interface {
 	Say(channelName, message string)                    // Say is function for sending messages to a twitch chat.
 	Reply(channelName, parentMessageID, message string) // Reply is a function that replies to a thread.
@@ -22,19 +26,15 @@ type chatClient interface {
 	Depart(channelName string)                          // Depart is a function that allows to leave from a channel.
 }
 
-// Middleware represents a function that is called before any Filters or Commands.
-// It can be used for logging Command's parameters, error handling or measure how much time a command took to execute.
-type Middleware func(Handler) Handler
-
-// Controller represents a manager to Commands.
+// Controller represents a manager to commands.
 type Controller struct {
 	logger      *zap.Logger        // Logger is just self explanatory, it's used for logging.
-	commands    map[string]Handler // Commands is a map that stores commands, that are wrapped with Middlewares and Filters.
-	middlewares []Middleware       // Middlewares represents a list of functions that are added to each commands before any Filter.
-	prefix      string             // Prefix is a string that is added before any Commands.
+	commands    map[string]Handler // Commands is a map that stores callbacks for commands. Handlers are wrapped with middlewares and filters.
+	middlewares []Middleware       // Middlewares represents a list of functions. Middlewares are added to every handlers before any filter.
+	prefix      string             // Prefix represents a string that is added at the start of all keys in commands.
 }
 
-// NewController creates an instance of Controller for managing Commands.
+// NewController creates an instance of Controller for managing commands.
 func NewController(prefix string, logger *zap.Logger) *Controller {
 	return &Controller{
 		logger:   logger,
@@ -43,7 +43,7 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 	}
 }
 
-// Prefix returns a prefix that is added before any command.
+// Prefix returns a string that is added at the start of commands' key.
 func (c Controller) Prefix() string {
 	return c.prefix
 }
@@ -60,7 +60,7 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 
 	ctx = setPrivateMessageToContext(ctx, &privateMessage)
 
-	//nolint:errcheck // error is handled in a Middleware called ErrorHandler
+	//nolint:errcheck // error is handled in a middleware called ErrorHandler
 	command(ctx, args[1:], chatClient)
 }
 
@@ -69,8 +69,9 @@ func (c *Controller) UseWith(middleware Middleware) {
 	c.middlewares = append(c.middlewares, middleware)
 }
 
-// AddCommand adds a command handler to a map in Controller. The Handle is being wrapped with filters and middlewares, before adding to a map.
-// The order of calling goes like this: Middlewares -> Filters -> Handler.
+// AddCommand adds a command handler to a map in Controller.
+// The handler is being wrapped with filters and middlewares, before it is added to commands.
+// The order of functions in wrapped handler goes like this: Middlewares -> Filters -> Handler.
 func (c *Controller) AddCommand(commandName string, handler Handler, filters []Filter) {
 	for i := len(filters) - 1; i >= 0; i-- {
 		handler = filters[i](handler)
