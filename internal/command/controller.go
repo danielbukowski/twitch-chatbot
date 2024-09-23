@@ -43,11 +43,6 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 	}
 }
 
-// Prefix returns a string that is added at the start of commands' key.
-func (c Controller) Prefix() string {
-	return c.prefix
-}
-
 // CallCommand searches for a command and execute it, if find one.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
