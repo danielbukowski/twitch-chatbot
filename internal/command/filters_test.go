@@ -1,10 +1,26 @@
 package command
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gempir/go-twitch-irc/v4"
 )
+
+type chatClientMock struct{}
+
+func (c chatClientMock) Say(channelName, message string) {
+
+}
+func (c chatClientMock) Reply(channelName, parentMessageID, message string) {
+
+}
+func (c chatClientMock) Join(channels ...string) {
+
+}
+func (c chatClientMock) Depart(channelName string) {
+
+}
 
 func TestHasRole(t *testing.T) {
 	t.Run("returns ErrNoPermissions, when no roles were passed to the decorator", func(t *testing.T) {
@@ -18,15 +34,17 @@ func TestHasRole(t *testing.T) {
 				},
 			},
 		}
-		ircClient := &twitch.Client{}
-		cb := func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error {
+
+		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		var mockedChatClient chatClient = chatClientMock{}
+		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
 		}
 		var expected error = errNoPermissions
 
 		//when
-		var hasRoleDecorator CallbackSignature = HasRole(decoratorRoles, cb)
-		var got error = hasRoleDecorator(args, privateMessage, ircClient)
+		var hasRoleDecorator Handler = HasRole(decoratorRoles)(cb)
+		var got error = hasRoleDecorator(ctx, args, mockedChatClient)
 
 		//then
 		if expected != got {
@@ -45,15 +63,17 @@ func TestHasRole(t *testing.T) {
 				},
 			},
 		}
-		ircClient := &twitch.Client{}
-		cb := func(args []string, privateMessage *twitch.PrivateMessage, ircClient *twitch.Client) error {
+		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+
+		var mockedChatClient chatClient = chatClientMock{}
+		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
 		}
 		var expected error = nil
 
 		//when
-		var hasRoleDecorator CallbackSignature = HasRole(decoratorRoles, cb)
-		var got error = hasRoleDecorator(args, privateMessage, ircClient)
+		var hasRoleDecorator Handler = HasRole(decoratorRoles)(cb)
+		var got error = hasRoleDecorator(ctx, args, mockedChatClient)
 
 		//then
 		if expected != got {

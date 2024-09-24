@@ -83,11 +83,15 @@ func main() {
 	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
 	ircClient.Join(config.TwitchChannelName)
 
-	commandController := command.NewController()
-	commandPrefix := commandController.Prefix()
+	commandPrefix := "!"
+	commandController := command.NewController(commandPrefix, logger)
+
+	commandController.UseWith(command.ErrorHandler(logger))
 
 	if *isDevEnv {
-		commandController.AddCommand(commandPrefix+"ping", command.Ping)
+
+		// Add commands only after this line
+		commandController.AddCommand(commandPrefix+"ping", command.Ping, []command.Filter{})
 	}
 
 	ircClient.OnPrivateMessage(func(privateMessage twitch.PrivateMessage) {
@@ -97,7 +101,7 @@ func main() {
 			return
 		}
 
-		commandController.CallCommand(userMessage, &privateMessage, ircClient)
+		commandController.CallCommand(ctx, userMessage, privateMessage, ircClient)
 	})
 
 	ircClient.OnConnect(func() {

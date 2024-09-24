@@ -1,13 +1,13 @@
 package command
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/gempir/go-twitch-irc/v4"
 )
 
-var Ping CallbackSignature = func(_ []string, message *twitch.PrivateMessage, ircClient *twitch.Client) error {
-	ircClient.Say(message.Channel, fmt.Sprintf("Pong! @%s", message.User.DisplayName))
+var Ping Handler = func(ctx context.Context, _ []string, chatClient chatClient) error {
+	privMsg := GetPrivateMessageFromContext(ctx)
+	chatClient.Say(privMsg.Channel, fmt.Sprintf("Pong! @%s", privMsg.User.DisplayName))
 
 	return nil
 }
