@@ -83,10 +83,14 @@ func main() {
 	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
 	ircClient.Join(config.TwitchChannelName)
 
-	commandController := command.NewController("!", logger)
-	commandPrefix := commandController.Prefix()
+	commandPrefix := "!"
+	commandController := command.NewController(commandPrefix, logger)
+
+	commandController.UseWith(command.ErrorHandler(logger))
 
 	if *isDevEnv {
+
+		// Add commands only after this line
 		commandController.AddCommand(commandPrefix+"ping", command.Ping, []command.Filter{})
 	}
 
