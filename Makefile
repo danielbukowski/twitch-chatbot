@@ -9,6 +9,9 @@ migration-reset:
 run:
 	go run -tags="${BUILD_TAGS}" cmd/main/main.go -dev
 
+build-windows:
+	go build -o ./tmp/main.exe -tags="${BUILD_TAGS}" ./cmd/main/main.go
+
 check-build:
 	go build -v -tags="${BUILD_TAGS}" ./...
 
