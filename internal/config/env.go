@@ -17,6 +17,10 @@ type Config struct {
 	TwitchOAuth2RedirectURI string
 	DatabaseUsername        string
 	DatabasePassword        string
+	GrafanaCloudInstanceID  string
+	GrafanaAPIToken         string
+	OTELServiceName         string
+	OTLPExporterEndpoint    string
 }
 
 func New(isDevEnv bool) (*Config, error) {
@@ -40,6 +44,10 @@ func New(isDevEnv bool) (*Config, error) {
 		CipherPassphrase:        getEnv("CIPHER_PASSPHRASE"),
 		DatabaseUsername:        getEnv("DATABASE_USERNAME"),
 		DatabasePassword:        getEnv("DATABASE_PASSWORD"),
+		GrafanaCloudInstanceID:  getEnv("GRAFANA_CLOUD_INSTANCE_ID"),
+		GrafanaAPIToken:         getEnv("GRAFANA_API_TOKEN"),
+		OTELServiceName:         getEnv("OTEL_SERVICE_NAME"),
+		OTLPExporterEndpoint:    getEnv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 	}, nil
 }
 
