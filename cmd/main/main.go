@@ -2,11 +2,24 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/cipher"
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
@@ -29,6 +42,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	shutdown, err := initOpenTelemetrySDK(config.GrafanaCloudInstanceID, config.GrafanaAPIToken)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		err := shutdown(ctx)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
 
 	//nolint:errcheck
 	defer logger.Sync()
@@ -132,4 +157,80 @@ func main() {
 	if err != nil {
 		logger.Panic("failed to connect to the IRC server", zap.Error(err))
 	}
+}
+
+func initOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Context) error, err error) {
+	headers := make(map[string]string)
+	credentials := base64.StdEncoding.EncodeToString([]byte(instanceID + ":" + APIToken))
+	headers["Authorization"] = fmt.Sprintf("Basic %s", credentials)
+
+	ctx := context.Background()
+	var shutdownFuncs []func(context.Context) error
+
+	shutdown = func(ctx context.Context) error {
+		var err error
+		for _, fn := range shutdownFuncs {
+			err = errors.Join(err, fn(ctx))
+		}
+		shutdownFuncs = nil
+		return err
+	}
+
+	handleErr := func(inErr error) {
+		err = errors.Join(inErr, shutdown(ctx))
+	}
+
+	propagator := propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	)
+	otel.SetTextMapPropagator(propagator)
+
+	metricExporter, err := otlpmetrichttp.New(
+		ctx,
+		otlpmetrichttp.WithHeaders(headers),
+	)
+	if err != nil {
+		handleErr(err)
+		return nil, err
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
+	)
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	otel.SetMeterProvider(meterProvider)
+
+	tracerExporter, err := otlptracehttp.New(
+		ctx,
+		otlptracehttp.WithHeaders(headers),
+	)
+	if err != nil {
+		handleErr(err)
+		return nil, err
+	}
+
+	shutdownFuncs = append(shutdownFuncs, tracerExporter.Shutdown)
+
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(tracerExporter),
+	)
+	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+	otel.SetTracerProvider(tracerProvider)
+
+	logExporter, err := otlploghttp.New(ctx,
+		otlploghttp.WithHeaders(headers),
+	)
+	if err != nil {
+		handleErr(err)
+		return nil, err
+	}
+
+	loggerProvider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+	)
+	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+	global.SetLoggerProvider(loggerProvider)
+
+	return
 }
