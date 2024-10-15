@@ -38,6 +38,11 @@ func main() {
 	code := flag.String("code", "", "twitch authorization code to get access credentials")
 	flag.Parse()
 
+	config, err := config.New(*isDevEnv)
+	if err != nil {
+		panic(errors.Join(errors.New("failed to initialize config"), err))
+	}
+
 	logger, err := logger.New(*isDevEnv)
 	if err != nil {
 		panic(err)
@@ -59,11 +64,6 @@ func main() {
 	defer logger.Sync()
 
 	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
-
-	config, err := config.New(*isDevEnv)
-	if err != nil {
-		logger.Panic("failed to initialize config", zap.Error(err))
-	}
 
 	accessCredentialsCipher, err := cipher.NewAESCipher(config.CipherPassphrase, 24)
 	if err != nil {
