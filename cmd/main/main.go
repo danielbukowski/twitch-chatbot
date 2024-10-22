@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -197,9 +199,16 @@ func initOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Co
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
+		metric.WithReader(metric.NewManualReader(metric.WithProducer(runtime.NewProducer()))),
 	)
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
+
+	err = runtime.Start()
+	if err != nil {
+		handleErr(err)
+		return nil, err
+	}
 
 	tracerExporter, err := otlptracehttp.New(
 		ctx,

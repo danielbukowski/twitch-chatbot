@@ -29,6 +29,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 go.opentelemetry.io/contrib/bridges/otelzap v0.6.0 h1:j8icMXyyqNf6HGuwlYhniPnVsbJIq7n+WirDu3VAJdQ=
 go.opentelemetry.io/contrib/bridges/otelzap v0.6.0/go.mod h1:evIOZpl+kAlU5IsaYX2Siw+IbpacAZvXemVsgt70uvw=
+go.opentelemetry.io/contrib/instrumentation/runtime v0.56.0 h1:s7wHG+t8bEoH7ibWk1nk682h7EoWLJ5/8j+TSO3bX/o=
+go.opentelemetry.io/contrib/instrumentation/runtime v0.56.0/go.mod h1:Q8Hsv3d9DwryfIl+ebj4mY81IYVRSPy4QfxroVZwqLo=
 go.opentelemetry.io/otel v1.31.0 h1:NsJcKPIW0D0H3NgzPDHmo0WW6SptzPdqg/L1zsIm2hY=
 go.opentelemetry.io/otel v1.31.0/go.mod h1:O0C14Yl9FgkjqcCZAsE053C13OaddMYr/hz6clDkEJE=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.7.0 h1:mMOmtYie9Fx6TSVzw4W+NTpvoaS1JWWga37oI1a/4qQ=
