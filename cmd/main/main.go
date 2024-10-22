@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 
@@ -205,6 +206,12 @@ func initOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Co
 	otel.SetMeterProvider(meterProvider)
 
 	err = runtime.Start()
+	if err != nil {
+		handleErr(err)
+		return nil, err
+	}
+
+	err = host.Start(host.WithMeterProvider(meterProvider))
 	if err != nil {
 		handleErr(err)
 		return nil, err
