@@ -210,7 +210,7 @@ func initOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Co
 		return nil, err
 	}
 
-	tracerExporter, err := otlptracehttp.New(
+	traceExporter, err := otlptracehttp.New(
 		ctx,
 		otlptracehttp.WithHeaders(headers),
 	)
@@ -219,13 +219,15 @@ func initOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Co
 		return nil, err
 	}
 
-	shutdownFuncs = append(shutdownFuncs, tracerExporter.Shutdown)
+	shutdownFuncs = append(shutdownFuncs, traceExporter.Shutdown)
 
-	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(tracerExporter),
+	bsp := trace.NewBatchSpanProcessor(traceExporter)
+	traceProvider := trace.NewTracerProvider(
+		trace.WithBatcher(traceExporter),
+		trace.WithSpanProcessor(bsp),
 	)
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
-	otel.SetTracerProvider(tracerProvider)
+	shutdownFuncs = append(shutdownFuncs, traceProvider.Shutdown)
+	otel.SetTracerProvider(traceProvider)
 
 	logExporter, err := otlploghttp.New(ctx,
 		otlploghttp.WithHeaders(headers),
