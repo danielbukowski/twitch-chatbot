@@ -26,7 +26,7 @@ func main() {
 	code := flag.String("code", "", "twitch authorization code to get access credentials")
 	flag.Parse()
 
-	config, err := config.New(*isDevEnv)
+	cfg, err := config.New(*isDevEnv)
 	if err != nil {
 		panic(errors.Join(errors.New("failed to initialize config"), err))
 	}
@@ -52,20 +52,20 @@ func main() {
 
 	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
 
-	accessCredentialsCipher, err := cipher.NewAESCipher(config.CipherPassphrase, 24)
+	accessCredentialsCipher, err := cipher.NewAESCipher(cfg.CipherPassphrase, 24)
 	if err != nil {
 		logger.Panic("failed to create AES cipher", zap.Error(err))
 	}
 
-	accessCredentialsStorage, err := storage.NewSQLiteStorage(ctx, "file:./db/database.db", config.DatabaseUsername, config.DatabasePassword, accessCredentialsCipher, logger)
+	accessCredentialsStorage, err := storage.NewSQLiteStorage(ctx, "file:./db/database.db", cfg.DatabaseUsername, cfg.DatabasePassword, accessCredentialsCipher, logger)
 	if err != nil {
 		logger.Panic("failed to establish a connection to SQLite", zap.Error(err))
 	}
 
 	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID:     config.TwitchClientID,
-		ClientSecret: config.TwitchClientSecret,
-		RedirectURI:  config.TwitchOAuth2RedirectURI,
+		ClientID:     cfg.TwitchClientID,
+		ClientSecret: cfg.TwitchClientSecret,
+		RedirectURI:  cfg.TwitchOAuth2RedirectURI,
 	})
 	if err != nil {
 		panic(err)
@@ -79,7 +79,7 @@ func main() {
 			logger.Panic("failed to exchange the code for access credentials", zap.Error(err))
 		}
 
-		err = accessCredentialsStorage.Save(ctx, resp.Data, config.TwitchChannelName)
+		err = accessCredentialsStorage.Save(ctx, resp.Data, cfg.TwitchChannelName)
 		if err != nil {
 			logger.Panic("failed to save the exchanged access credentials to database", zap.Error(err))
 		}
@@ -87,13 +87,13 @@ func main() {
 		logger.Info("successfully exchanged and saved access credentials!")
 	}
 
-	accessCredentials, err := accessCredentialsStorage.Retrieve(ctx, config.TwitchChannelName)
+	accessCredentials, err := accessCredentialsStorage.Retrieve(ctx, cfg.TwitchChannelName)
 	if err != nil {
 		logger.Panic("failed to retrieve access credentials from database", zap.Error(err))
 	}
 
-	ircClient := twitch.NewClient(config.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
-	ircClient.Join(config.TwitchChannelName)
+	ircClient := twitch.NewClient(cfg.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
+	ircClient.Join(cfg.TwitchChannelName)
 
 	commandPrefix := "!"
 	commandController := command.NewController(commandPrefix, logger)
@@ -130,7 +130,7 @@ func main() {
 
 		logger.Info("refreshed access credentials")
 
-		err = accessCredentialsStorage.Update(ctx, resp.Data, config.TwitchChannelName)
+		err = accessCredentialsStorage.Update(ctx, resp.Data, cfg.TwitchChannelName)
 		if err != nil {
 			logger.Panic("failed to update access credentials", zap.Error(err))
 		}
