@@ -4,18 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func New(isDev bool) (*zap.Logger, error) {
 	if !isDev {
-		config := zap.NewProductionConfig()
-
-		logger, err := config.Build()
-		if err != nil {
-			return nil, err
-		}
+		logger := zap.New(otelzap.NewCore("main"))
 
 		return logger, nil
 	}
