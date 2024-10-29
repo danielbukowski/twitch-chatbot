@@ -43,7 +43,7 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 	}
 }
 
-// CallCommand searches for a command and execute it, if find one.
+// CallCommand searches for a command in the commands. If the method finds one, it sets up a context and executes the command.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
 	args := strings.Split(userMessage, " ")
 	commandName := args[0]
@@ -55,7 +55,7 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 
 	ctx = setPrivateMessageToContext(ctx, &privateMessage)
 
-	//nolint:errcheck // error is handled in a middleware called ErrorHandler
+	//nolint:errcheck // error is handled in ErrorHandler middleware
 	command(ctx, args[1:], chatClient)
 }
 
