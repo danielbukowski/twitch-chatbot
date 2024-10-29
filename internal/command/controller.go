@@ -8,6 +8,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const blankSpace = " "
+
 // Handler represents a function for a command.
 type Handler func(ctx context.Context, args []string, chatClient chatClient) error
 
@@ -45,7 +47,7 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 
 // CallCommand searches for a command in the commands. If the method finds one, it sets up a context and executes the command.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
-	args := strings.Split(userMessage, " ")
+	args := strings.Split(userMessage, blankSpace)
 	commandName := args[0]
 
 	command, ok := c.commands[commandName]
