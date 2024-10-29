@@ -28,7 +28,7 @@ import (
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
 	"github.com/danielbukowski/twitch-chatbot/internal/command"
 	"github.com/danielbukowski/twitch-chatbot/internal/config"
-	"github.com/danielbukowski/twitch-chatbot/internal/logger"
+	lg "github.com/danielbukowski/twitch-chatbot/internal/logger"
 	"github.com/gempir/go-twitch-irc/v4"
 	"github.com/nicklaw5/helix/v2"
 	"go.uber.org/zap"
@@ -46,7 +46,7 @@ func main() {
 		panic(errors.Join(errors.New("failed to initialize config"), err))
 	}
 
-	logger, err := logger.New(*isDevEnv)
+	logger, err := lg.New(*isDevEnv)
 	if err != nil {
 		panic(err)
 	}
@@ -63,8 +63,7 @@ func main() {
 		}
 	}()
 
-	//nolint:errcheck
-	defer logger.Sync()
+	defer lg.Flush(logger)
 
 	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
 

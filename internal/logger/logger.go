@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"os"
 
 	"go.uber.org/zap"
@@ -34,4 +35,11 @@ func New(isDev bool) (*zap.Logger, error) {
 	}
 
 	return logger, nil
+}
+
+func Flush(logger *zap.Logger) {
+	err := logger.Sync()
+	if err != nil {
+		fmt.Printf("sync method in logger threw error: %v\n", err)
+	}
 }

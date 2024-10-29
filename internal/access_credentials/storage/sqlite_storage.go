@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	lg "github.com/danielbukowski/twitch-chatbot/internal/logger"
 	"github.com/nicklaw5/helix/v2"
 	"go.uber.org/zap"
 )
@@ -52,8 +53,7 @@ func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix
 	defer cancel()
 
 	s.logger.Info("retrieving access credentials from database")
-	//nolint:errcheck
-	defer s.logger.Sync()
+	defer lg.Flush(s.logger)
 
 	row := s.db.QueryRowContext(ctx, query, channelName)
 
@@ -78,8 +78,7 @@ func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.Access
 	query := "INSERT INTO access_credentials (channel_name, details) VALUES (?, ?);"
 
 	s.logger.Info("encrypting access credentials")
-	//nolint:errcheck
-	defer s.logger.Sync()
+	defer lg.Flush(s.logger)
 
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
 	if err != nil {
@@ -116,8 +115,7 @@ func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.Acce
 	query := "UPDATE access_credentials SET details = ? WHERE channel_name = ?;"
 
 	s.logger.Info("encrypting access credentials")
-	//nolint:errcheck
-	defer s.logger.Sync()
+	defer lg.Flush(s.logger)
 
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
 	if err != nil {
