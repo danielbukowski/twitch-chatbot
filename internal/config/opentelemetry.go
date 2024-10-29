@@ -19,12 +19,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func InitOpenTelemetrySDK(instanceID, APIToken string) (shutdown func(context.Context) error, err error) {
+func InitOpenTelemetrySDK(ctx context.Context, instanceID, APIToken string) (shutdown func(context.Context) error, err error) {
 	headers := make(map[string]string)
 	credentials := base64.StdEncoding.EncodeToString([]byte(instanceID + ":" + APIToken))
 	headers["Authorization"] = fmt.Sprintf("Basic %s", credentials)
 
-	ctx := context.Background()
 	var shutdownFuncs []func(context.Context) error
 
 	shutdown = func(ctx context.Context) error {
