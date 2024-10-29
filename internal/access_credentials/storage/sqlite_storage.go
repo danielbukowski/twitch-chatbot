@@ -42,7 +42,7 @@ func NewSQLiteStorage(ctx context.Context, dataSourceName, username, password st
 	return &SQLiteStorage{
 		db:                      db,
 		accessCredentialsCipher: accessCredentialsCipher,
-		logger:                  logger,
+		logger:                  logger.Named("access_credentials/storage"),
 	}, nil
 }
 
