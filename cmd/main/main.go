@@ -22,16 +22,16 @@ import (
 func main() {
 	ctx := context.Background()
 
-	isDevEnv := flag.Bool("dev", false, "development environment check")
+	isDevFlag := flag.Bool("dev", false, "development environment check")
 	code := flag.String("code", "", "twitch authorization code to get access credentials")
 	flag.Parse()
 
-	cfg, err := config.New(*isDevEnv)
+	cfg, err := config.New(*isDevFlag)
 	if err != nil {
 		panic(errors.Join(errors.New("failed to initialize config"), err))
 	}
 
-	logger, err := lg.New(*isDevEnv)
+	logger, err := lg.New(*isDevFlag)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +71,7 @@ func main() {
 		panic(err)
 	}
 
-	if *isDevEnv && len(*code) != 0 {
+	if *isDevFlag && len(*code) != 0 {
 		logger.Info("exchanging authorization code for access credentials...")
 
 		resp, err := helixClient.RequestUserAccessToken(*code)
@@ -100,7 +100,7 @@ func main() {
 
 	commandController.UseWith(command.ErrorHandler(logger))
 
-	if *isDevEnv {
+	if *isDevFlag {
 
 		// Add commands only after this line
 		commandController.AddCommand(commandPrefix+"ping", command.Ping, []command.Filter{})
