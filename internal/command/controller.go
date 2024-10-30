@@ -55,7 +55,8 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 		return
 	}
 
-	ctx = setPrivateMessageToContext(ctx, &privateMessage)
+	cmdCtx := NewContext(commandName, &privateMessage, c.logger)
+	ctx = setContextToCommand(ctx, cmdCtx)
 
 	//nolint:errcheck // error is handled in ErrorHandler middleware
 	command(ctx, args[1:], chatClient)

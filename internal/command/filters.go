@@ -18,11 +18,10 @@ func hasBadge(badgeName string, badges map[string]int) bool {
 func HasRole(roles []string) Filter {
 	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {
-
-			privMsg := GetPrivateMessageFromContext(ctx)
+			cmdCtx := UnwrapContext(ctx)
 
 			for _, roleName := range roles {
-				if hasBadge(roleName, privMsg.User.Badges) {
+				if hasBadge(roleName, cmdCtx.PrivMsg.User.Badges) {
 					return cb(ctx, args, chatClient)
 				}
 			}

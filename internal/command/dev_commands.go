@@ -6,8 +6,8 @@ import (
 )
 
 var Ping Handler = func(ctx context.Context, _ []string, chatClient chatClient) error {
-	privMsg := GetPrivateMessageFromContext(ctx)
-	chatClient.Say(privMsg.Channel, fmt.Sprintf("Pong! @%s", privMsg.User.DisplayName))
+	cmdCtx := UnwrapContext(ctx)
+	chatClient.Say(cmdCtx.PrivMsg.Channel, fmt.Sprintf("Pong! @%s", cmdCtx.PrivMsg.User.DisplayName))
 
 	return nil
 }
