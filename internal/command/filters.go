@@ -3,9 +3,11 @@ package command
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var errNoPermissions = errors.New("called a command without a needed role")
+var errCommandOnCooldown = errors.New("command has a cooldown")
 
 // Available twitch badges:
 // ["broadcaster", "moderator", "subscriber", "artist-badge", "founder", "vip", "sub-gifter", "bits", "partner", "staff"].
@@ -26,6 +28,23 @@ func HasRole(roles []string) Filter {
 			}
 
 			return errNoPermissions
+		}
+	}
+}
+
+// Cooldown stops from calling a command, when not enough time passed.
+func Cooldown(cooldown time.Duration) Filter {
+	lastCalled := time.Time{}
+
+	return func(cb Handler) Handler {
+		return func(ctx context.Context, args []string, chatClient chatClient) error {
+
+			if time.Now().Before(lastCalled.Add(cooldown)) {
+				return errCommandOnCooldown
+			}
+
+			lastCalled = time.Now()
+			return cb(ctx, args, chatClient)
 		}
 	}
 }
