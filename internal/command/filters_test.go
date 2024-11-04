@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gempir/go-twitch-irc/v4"
 )
@@ -76,6 +77,83 @@ func TestHasRole(t *testing.T) {
 		var got error = hasRoleDecorator(ctx, args, mockedChatClient)
 
 		//then
+		if expected != got {
+			t.Errorf("Expected `%v`, got `%v` error", expected, got)
+		}
+	})
+}
+
+func TestCooldown(t *testing.T) {
+	t.Run("returns no errors, when you never called the command and the command has a cooldown", func(t *testing.T) {
+		// given
+		args := []string{}
+		privateMessage := &twitch.PrivateMessage{}
+		var mockedChatClient chatClient = chatClientMock{}
+		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cooldown := 30 * time.Second
+		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
+			return nil
+		}
+		var expected error = nil
+
+		// when
+		var cooldownFilter = Cooldown(cooldown)(cb)
+		var got = cooldownFilter(ctx, args, mockedChatClient)
+
+		// then
+		if expected != got {
+			t.Errorf("Expected `%v`, got `%v` error", expected, got)
+		}
+	})
+
+	t.Run("returns errCommandOnCooldown, when not enough time passed since the last command call", func(t *testing.T) {
+		// given
+		args := []string{}
+		privateMessage := &twitch.PrivateMessage{}
+		var mockedChatClient chatClient = chatClientMock{}
+		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cooldown := 30 * time.Second
+		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
+			return nil
+		}
+		var expected = errCommandOnCooldown
+
+		// when
+		var cooldownFilter = Cooldown(cooldown)(cb)
+		// make the first call to the command to set the cooldown
+		cooldownFilter(ctx, args, mockedChatClient)
+
+		var got = cooldownFilter(ctx, args, mockedChatClient)
+
+		// then
+		if expected != got {
+			t.Errorf("Expected `%v`, got `%v` error", expected, got)
+		}
+	})
+
+	t.Run("returns nil, when the enough cooldown passed since the last command call", func(t *testing.T) {
+		// given
+		args := []string{}
+		privateMessage := &twitch.PrivateMessage{}
+		var mockedChatClient chatClient = chatClientMock{}
+		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cooldown := 3 * time.Second
+		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
+			return nil
+		}
+		var expected error = nil
+
+		// when
+		var cooldownFilter = Cooldown(cooldown)(cb)
+
+		// make the first call to the command to set the cooldown
+		cooldownFilter(ctx, args, mockedChatClient)
+		// wait out the cooldown
+		time.Sleep(cooldown + 1*time.Second)
+
+		var got = cooldownFilter(ctx, args, mockedChatClient)
+
+		// then
 		if expected != got {
 			t.Errorf("Expected `%v`, got `%v` error", expected, got)
 		}
