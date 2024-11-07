@@ -17,6 +17,9 @@ func ErrorHandler(logger *zap.Logger) Middleware {
 				if errors.Is(err, errNoPermissions) {
 					return nil
 				}
+				if errors.Is(err, errCommandOnCooldown) {
+					return nil
+				}
 
 				logger.Error("An unhandled error occurred", zap.Error(err))
 			}
