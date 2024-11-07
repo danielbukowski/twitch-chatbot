@@ -52,7 +52,6 @@ func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
 
-	s.logger.Info("retrieving access credentials from database")
 	defer lg.Flush(s.logger)
 
 	row := s.db.QueryRowContext(ctx, query, channelName)
@@ -62,9 +61,6 @@ func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix
 	if err != nil {
 		return helix.AccessCredentials{}, err
 	}
-
-	s.logger.Info("retrieved access credentials from database")
-	s.logger.Info("decrypting the retrieved access credentials")
 
 	accessCredentials, err := s.accessCredentialsCipher.Decrypt(details)
 	if err != nil {
@@ -77,15 +73,12 @@ func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix
 func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.AccessCredentials, channelName string) error {
 	query := "INSERT INTO access_credentials (channel_name, details) VALUES (?, ?);"
 
-	s.logger.Info("encrypting access credentials")
 	defer lg.Flush(s.logger)
 
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
 	if err != nil {
 		return errors.Join(errors.New("failed to encrypt access credentials"), err)
 	}
-
-	s.logger.Info("encrypted access credentials")
 
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
@@ -94,8 +87,6 @@ func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.Access
 	if err != nil {
 		return err
 	}
-
-	s.logger.Info("inserting encrypted access credentials to database")
 
 	res, err := stmt.ExecContext(ctx, channelName, base64AccessCredentials)
 	if err != nil {
@@ -106,15 +97,12 @@ func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.Access
 		return errors.Join(errors.New("did not save access credentials"), err)
 	}
 
-	s.logger.Info("successfully saved new access credentials to database")
-
 	return nil
 }
 
 func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.AccessCredentials, channelName string) error {
 	query := "UPDATE access_credentials SET details = ? WHERE channel_name = ?;"
 
-	s.logger.Info("encrypting access credentials")
 	defer lg.Flush(s.logger)
 
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
@@ -130,8 +118,6 @@ func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.Acce
 		return err
 	}
 
-	s.logger.Info("saving updated access credentials to database")
-
 	res, err := stmt.ExecContext(ctx, base64AccessCredentials, channelName)
 	if err != nil {
 		return err
@@ -140,8 +126,6 @@ func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.Acce
 	if rows, err := res.RowsAffected(); err != nil || rows == 0 {
 		return errors.Join(errors.New("did not save access credentials"), err)
 	}
-
-	s.logger.Info("successfully updated new access credentials to database")
 
 	return nil
 }
