@@ -50,8 +50,6 @@ func main() {
 
 	defer lg.Flush(logger)
 
-	logger.Info("successfully initialized logger", zap.Bool("IsDev", *isDevEnv))
-
 	accessCredentialsCipher, err := cipher.NewAESCipher(cfg.CipherPassphrase, 24)
 	if err != nil {
 		logger.Panic("failed to create AES cipher", zap.Error(err))
