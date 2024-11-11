@@ -94,7 +94,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 30 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
@@ -116,7 +117,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 30 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
@@ -141,7 +143,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 3 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
