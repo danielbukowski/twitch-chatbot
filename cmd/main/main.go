@@ -108,6 +108,10 @@ func main() {
 	ircClient.OnPrivateMessage(func(privateMessage twitch.PrivateMessage) {
 		userMessage := privateMessage.Message
 
+		if strings.EqualFold(privateMessage.User.Name, cfg.TwitchChatbotName) {
+			return
+		}
+
 		if !strings.HasPrefix(userMessage, commandPrefix) {
 			return
 		}
