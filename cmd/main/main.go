@@ -49,8 +49,6 @@ func main() {
 		panic(err)
 	}
 
-	defer lg.Flush(logger)
-
 	accessCredentialsCipher, err := cipher.NewAESCipher(cfg.CipherPassphrase, 24)
 	if err != nil {
 		logger.Panic("failed to create AES cipher", zap.Error(err))
