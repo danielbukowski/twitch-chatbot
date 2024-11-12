@@ -50,6 +50,10 @@ func NewSQLiteStorage(ctx context.Context, dataSourceName, username, password st
 	}, nil
 }
 
+func (s *SQLiteStorage) Close() error {
+	return s.db.Close()
+}
+
 func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix.AccessCredentials, error) {
 	query := "SELECT details FROM access_credentials WHERE channel_name = ?;"
 
