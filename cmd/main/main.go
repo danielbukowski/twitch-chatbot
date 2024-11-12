@@ -5,9 +5,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/cipher"
 	"github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage"
@@ -20,7 +27,8 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
 	isDevFlag := flag.Bool("dev", false, "development environment check")
 	code := flag.String("code", "", "twitch authorization code to get access credentials")
@@ -40,13 +48,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	defer func() {
-		err := shutdown(ctx)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}()
 
 	defer lg.Flush(logger)
 
@@ -138,8 +139,42 @@ func main() {
 		ircClient.SetIRCToken(fmt.Sprintf("oauth:%s", resp.Data.AccessToken))
 	}
 
-	err = ircClient.Connect()
-	if err != nil {
-		logger.Panic("failed to connect to the IRC server", zap.Error(err))
+	g, gCtx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return ircClient.Connect()
+	})
+
+	g.Go(func() error {
+		<-gCtx.Done()
+
+		lg.Flush(logger)
+
+		ctx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelShutdown()
+
+		fmt.Println("closing the OpenTelemetry connections...")
+		return shutdown(ctx)
+	})
+
+	g.Go(func() error {
+		<-gCtx.Done()
+
+		fmt.Println("closing the database connection...")
+		return accessCredentialsStorage.Close()
+	})
+
+	g.Go(func() error {
+		<-gCtx.Done()
+
+		fmt.Println("closing the IRC server connection...")
+		return ircClient.Disconnect()
+	})
+
+	if err = g.Wait(); err != nil {
+		fmt.Printf("exited with error: %v\n", err)
+		return
 	}
+
+	fmt.Println("gracefully exited without any errors!")
 }
