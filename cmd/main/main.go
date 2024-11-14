@@ -26,6 +26,9 @@ import (
 	"go.uber.org/zap"
 )
 
+var meter = otel.Meter("main")
+var chatMessageCounter metric.Int64Counter
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -103,6 +106,15 @@ func main() {
 		commandController.AddCommand(commandPrefix+"ping", command.Ping, []command.Filter{})
 	}
 
+	chatMessageCounter, err = meter.Int64Counter(
+		"chat.message.counter",
+		metric.WithDescription("Number of messages on the chat."),
+		metric.WithUnit("{message}"),
+	)
+	if err != nil {
+		logger.Panic("failed to create a chat message counter", zap.Error(err))
+	}
+
 	ircClient.OnPrivateMessage(func(privateMessage twitch.PrivateMessage) {
 		userMessage := privateMessage.Message
 
@@ -111,6 +123,7 @@ func main() {
 		}
 
 		if !strings.HasPrefix(userMessage, commandPrefix) {
+			chatMessageCounter.Add(ctx, 1)
 			return
 		}
 
