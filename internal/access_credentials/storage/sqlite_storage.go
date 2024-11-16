@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	lg "github.com/danielbukowski/twitch-chatbot/internal/logger"
 	"github.com/nicklaw5/helix/v2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -63,8 +62,6 @@ func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
 
-	defer lg.Flush(s.logger)
-
 	span.AddEvent("executing the query")
 	row := s.db.QueryRowContext(ctx, query, channelName)
 	span.AddEvent("executed the query")
@@ -99,8 +96,6 @@ func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.Access
 
 	ctx, span := tracer.Start(ctx, "save")
 	defer span.End()
-
-	defer lg.Flush(s.logger)
 
 	span.AddEvent("encrypting access credentials")
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
@@ -149,8 +144,6 @@ func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.Acce
 
 	ctx, span := tracer.Start(ctx, "update")
 	defer span.End()
-
-	defer lg.Flush(s.logger)
 
 	span.AddEvent("encrypting access credentials")
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
