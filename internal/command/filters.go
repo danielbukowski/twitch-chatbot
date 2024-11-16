@@ -9,7 +9,7 @@ import (
 var errNoPermissions = errors.New("called a command without a needed role")
 var errCommandOnCooldown = errors.New("command has a cooldown")
 
-// Available twitch badges:
+// From the twitch docs I found, that are available badges like:
 // ["broadcaster", "moderator", "subscriber", "artist-badge", "founder", "vip", "sub-gifter", "bits", "partner", "staff"].
 func hasBadge(badgeName string, badges map[string]int) bool {
 	return badges[badgeName] != 0

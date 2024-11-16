@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Context represents a struct with helping fields to validate and record a command workflow.
+// Context represents a struct with helping fields for validating and recording a command workflow.
 type Context struct {
 	CommandName string                 // CommandName represents a name of a current command.
 	PrivMsg     *twitch.PrivateMessage // PrivMsg represents metadata of the sent message.
