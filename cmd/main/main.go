@@ -89,7 +89,7 @@ func main() {
 
 	accessCredentials, err := accessCredentialsStorage.Retrieve(ctx, cfg.TwitchChannelName)
 	if err != nil {
-		logger.Panic("failed to retrieve access credentials from database", zap.Error(err))
+		logger.Panic("failed to retrieve access credentials from the database", zap.Error(err))
 	}
 
 	ircClient := twitch.NewClient(cfg.TwitchChatbotName, fmt.Sprintf("oauth:%s", accessCredentials.AccessToken))
@@ -142,14 +142,14 @@ func main() {
 			logger.Panic("failed to refresh access credentials", zap.Error(err))
 		}
 
-		logger.Info("refreshed access credentials")
+		logger.Info("refreshed the expired access credentials")
 
 		err = accessCredentialsStorage.Update(ctx, resp.Data, cfg.TwitchChannelName)
 		if err != nil {
 			logger.Panic("failed to update access credentials", zap.Error(err))
 		}
 
-		logger.Info("saved new access credentials to database")
+		logger.Info("saved new access credentials to the database")
 
 		ircClient.SetIRCToken(fmt.Sprintf("oauth:%s", resp.Data.AccessToken))
 	}
@@ -157,6 +157,7 @@ func main() {
 	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
+		logger.Info("connecting to the twitch chat...")
 		return ircClient.Connect()
 	})
 
