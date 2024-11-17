@@ -5,10 +5,13 @@ import (
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v4"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
 
 const blankSpace = " "
+
+var tracer = otel.Tracer("github.com/danielbukowski/twitch-chatbot/internal/command")
 
 // Handler represents a function for a command.
 type Handler func(ctx context.Context, args []string, chatClient chatClient) error
