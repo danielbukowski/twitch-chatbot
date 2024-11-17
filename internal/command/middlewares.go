@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ErrorHandler takes care of returned errors (if it's present) from a executed command.
 func ErrorHandler() Middleware {
 	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {

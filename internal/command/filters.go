@@ -17,6 +17,8 @@ func hasBadge(badgeName string, badges map[string]int) bool {
 	return badges[badgeName] != 0
 }
 
+// HasRole rejects user's command request, when the user does not have a role for that.
+// The roles are compared with users's twitch badges.
 func HasRole(roles []string) Filter {
 	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {
