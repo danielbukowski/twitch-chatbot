@@ -61,8 +61,14 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 	cmdCtx := NewContext(commandName, &privateMessage, c.logger)
 	ctx = setContextToCommand(ctx, cmdCtx)
 
+	c.logger.Info("user called a command",
+		zap.String("username", privateMessage.User.Name),
+		zap.String("user_id", privateMessage.User.ID),
+		zap.String("command_name", commandName),
+	)
+
 	//nolint:errcheck // error is handled in ErrorHandler middleware
-	command(ctx, args[1:], chatClient)
+	_ = command(ctx, args[1:], chatClient)
 }
 
 // UseWith adds a middleware to a middlewares. The order when a middleware is added matters.
