@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func InitOpenTelemetrySDK(ctx context.Context, instanceID, APIToken string) (shutdown func(context.Context) error, err error) {
+func InitOpenTelemetrySDK(ctx context.Context, instanceID, APIToken string, isDev bool) (shutdown func(context.Context) error, err error) {
 	headers := make(map[string]string)
 	credentials := base64.StdEncoding.EncodeToString([]byte(instanceID + ":" + APIToken))
 	headers["Authorization"] = fmt.Sprintf("Basic %s", credentials)
@@ -84,10 +84,14 @@ func InitOpenTelemetrySDK(ctx context.Context, instanceID, APIToken string) (shu
 
 	shutdownFuncs = append(shutdownFuncs, traceExporter.Shutdown)
 
-	bsp := trace.NewBatchSpanProcessor(traceExporter)
+	traceSampler := trace.WithSampler(trace.AlwaysSample())
+	if !isDev {
+		trace.WithSampler(trace.TraceIDRatioBased(0.5))
+	}
+
 	traceProvider := trace.NewTracerProvider(
 		trace.WithBatcher(traceExporter),
-		trace.WithSpanProcessor(bsp),
+		traceSampler,
 	)
 	shutdownFuncs = append(shutdownFuncs, traceProvider.Shutdown)
 	otel.SetTracerProvider(traceProvider)

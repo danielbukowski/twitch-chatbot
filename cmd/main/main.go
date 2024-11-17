@@ -47,7 +47,7 @@ func main() {
 		panic(err)
 	}
 
-	shutdown, err := config.InitOpenTelemetrySDK(ctx, cfg.GrafanaCloudInstanceID, cfg.GrafanaAPIToken)
+	shutdown, err := config.InitOpenTelemetrySDK(ctx, cfg.GrafanaCloudInstanceID, cfg.GrafanaAPIToken, *isDevFlag)
 	if err != nil {
 		panic(err)
 	}
