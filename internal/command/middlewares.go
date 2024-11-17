@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func ErrorHandler(logger *zap.Logger) Middleware {
+func ErrorHandler() Middleware {
 	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {
 			spanCtx, span := tracer.Start(ctx, "errorHandler")
@@ -32,7 +32,7 @@ func ErrorHandler(logger *zap.Logger) Middleware {
 				}
 
 				span.SetStatus(codes.Error, "unhandled error occurred")
-				logger.Error("unhandled error occurred", zap.Error(err))
+				cmdCtx.Logger.Error("unhandled error occurred", zap.Error(err))
 				return nil
 			}
 			span.SetStatus(codes.Ok, "successfully executed a command without error")

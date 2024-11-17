@@ -98,7 +98,7 @@ func main() {
 	commandPrefix := "!"
 	commandController := command.NewController(commandPrefix, logger)
 
-	commandController.UseWith(command.ErrorHandler(logger))
+	commandController.UseWith(command.ErrorHandler())
 
 	if *isDevFlag {
 
