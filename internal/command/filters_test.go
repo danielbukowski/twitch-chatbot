@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gempir/go-twitch-irc/v4"
+	"go.uber.org/zap"
 )
 
 type chatClientMock struct{}
@@ -36,7 +37,9 @@ func TestHasRole(t *testing.T) {
 			},
 		}
 
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
+
 		var mockedChatClient chatClient = chatClientMock{}
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
@@ -64,7 +67,9 @@ func TestHasRole(t *testing.T) {
 				},
 			},
 		}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 
 		var mockedChatClient chatClient = chatClientMock{}
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
@@ -89,7 +94,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 30 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
@@ -111,7 +117,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 30 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil
@@ -136,7 +143,8 @@ func TestCooldown(t *testing.T) {
 		args := []string{}
 		privateMessage := &twitch.PrivateMessage{}
 		var mockedChatClient chatClient = chatClientMock{}
-		ctx := setPrivateMessageToContext(context.Background(), privateMessage)
+		cmdCtx := NewContext("test", privateMessage, zap.NewNop())
+		ctx := setContextToCommand(context.Background(), cmdCtx)
 		cooldown := 3 * time.Second
 		var cb Handler = func(ctx context.Context, args []string, chatClient chatClient) error {
 			return nil

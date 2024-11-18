@@ -1,20 +1,17 @@
 package logger
 
 import (
+	"fmt"
 	"os"
 
+	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func New(isDev bool) (*zap.Logger, error) {
 	if !isDev {
-		config := zap.NewProductionConfig()
-
-		logger, err := config.Build()
-		if err != nil {
-			return nil, err
-		}
+		logger := zap.New(otelzap.NewCore("main"))
 
 		return logger, nil
 	}
@@ -34,4 +31,11 @@ func New(isDev bool) (*zap.Logger, error) {
 	}
 
 	return logger, nil
+}
+
+func Flush(logger *zap.Logger) {
+	err := logger.Sync()
+	if err != nil {
+		fmt.Printf("sync method in logger threw error: %v\n", err)
+	}
 }

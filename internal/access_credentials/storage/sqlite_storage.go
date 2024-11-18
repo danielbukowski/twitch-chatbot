@@ -8,10 +8,14 @@ import (
 	"time"
 
 	"github.com/nicklaw5/helix/v2"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
 const databaseRequestTimeout = 3 * time.Second
+
+var tracer = otel.Tracer("github.com/danielbukowski/twitch-chatbot/internal/access_credentials/storage")
 
 type accessCredentialsCipher interface {
 	Encrypt(accessCredentials helix.AccessCredentials) (string, error)
@@ -41,109 +45,145 @@ func NewSQLiteStorage(ctx context.Context, dataSourceName, username, password st
 	return &SQLiteStorage{
 		db:                      db,
 		accessCredentialsCipher: accessCredentialsCipher,
-		logger:                  logger,
+		logger:                  logger.Named("access_credentials/storage"),
 	}, nil
+}
+
+func (s *SQLiteStorage) Close() error {
+	return s.db.Close()
 }
 
 func (s *SQLiteStorage) Retrieve(ctx context.Context, channelName string) (helix.AccessCredentials, error) {
 	query := "SELECT details FROM access_credentials WHERE channel_name = ?;"
 
+	ctx, span := tracer.Start(ctx, "retrieve")
+	defer span.End()
+
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
 
-	s.logger.Info("retrieving access credentials from database")
-	//nolint:errcheck
-	defer s.logger.Sync()
-
+	span.AddEvent("executing the query")
 	row := s.db.QueryRowContext(ctx, query, channelName)
+	span.AddEvent("executed the query")
 
 	var details string
+
+	span.AddEvent("copying the result to a struct")
 	err := row.Scan(&details)
 	if err != nil {
-		return helix.AccessCredentials{}, err
+		errMsg := "failed to copy the result to a struct"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return helix.AccessCredentials{}, errors.Join(errors.New(errMsg), err)
 	}
+	span.AddEvent("successfully copied the result to a struct")
 
-	s.logger.Info("retrieved access credentials from database")
-	s.logger.Info("decrypting the retrieved access credentials")
-
+	span.AddEvent("decrypting access credentials")
 	accessCredentials, err := s.accessCredentialsCipher.Decrypt(details)
 	if err != nil {
-		return helix.AccessCredentials{}, errors.Join(errors.New("failed to decrypt access credentials"), err)
+		errMsg := "failed to decrypt access credentials"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return helix.AccessCredentials{}, errors.Join(errors.New(errMsg), err)
 	}
 
+	span.SetStatus(codes.Ok, "successfully decrypted access credentials")
 	return accessCredentials, nil
 }
 
 func (s *SQLiteStorage) Save(ctx context.Context, accessCredentials helix.AccessCredentials, channelName string) error {
 	query := "INSERT INTO access_credentials (channel_name, details) VALUES (?, ?);"
 
-	s.logger.Info("encrypting access credentials")
-	//nolint:errcheck
-	defer s.logger.Sync()
+	ctx, span := tracer.Start(ctx, "save")
+	defer span.End()
 
+	span.AddEvent("encrypting access credentials")
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
 	if err != nil {
-		return errors.Join(errors.New("failed to encrypt access credentials"), err)
+		errMsg := "failed to encrypt access credentials"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
-
-	s.logger.Info("encrypted access credentials")
+	span.AddEvent("successfully encrypted access credentials")
 
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
 
+	span.AddEvent("creating a prepared statement")
 	stmt, err := s.db.PrepareContext(ctx, query)
 	if err != nil {
-		return err
+		errMsg := "failed to create a prepared statement"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
 
-	s.logger.Info("inserting encrypted access credentials to database")
-
+	span.AddEvent("trying to save access credentials to the database")
 	res, err := stmt.ExecContext(ctx, channelName, base64AccessCredentials)
 	if err != nil {
-		return errors.Join(errors.New("failed to save access credentials to database"), err)
+		errMsg := "failed to execute a prepared statement"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
 
 	if rows, err := res.RowsAffected(); err != nil || rows == 0 {
-		return errors.Join(errors.New("did not save access credentials"), err)
+		errMsg := "failed to insert access credentials to the database"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
 
-	s.logger.Info("successfully saved new access credentials to database")
-
+	span.SetStatus(codes.Ok, "successfully saved access credentials to the database")
 	return nil
 }
 
 func (s *SQLiteStorage) Update(ctx context.Context, accessCredentials helix.AccessCredentials, channelName string) error {
 	query := "UPDATE access_credentials SET details = ? WHERE channel_name = ?;"
 
-	s.logger.Info("encrypting access credentials")
-	//nolint:errcheck
-	defer s.logger.Sync()
+	ctx, span := tracer.Start(ctx, "update")
+	defer span.End()
 
+	span.AddEvent("encrypting access credentials")
 	base64AccessCredentials, err := s.accessCredentialsCipher.Encrypt(accessCredentials)
 	if err != nil {
-		return errors.Join(errors.New("failed to encrypt access credentials"), err)
+		errMsg := "failed to encrypt access credentials"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
+	span.AddEvent("successfully encrypted access credentials")
 
 	ctx, cancel := context.WithTimeout(ctx, databaseRequestTimeout)
 	defer cancel()
 
+	span.AddEvent("creating a prepared statement")
 	stmt, err := s.db.PrepareContext(ctx, query)
 	if err != nil {
-		return err
+		errMsg := "failed to create a prepared statement"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
+	span.AddEvent("successfully created a prepared statement")
 
-	s.logger.Info("saving updated access credentials to database")
-
+	span.AddEvent("trying to update new access credentials to the database")
 	res, err := stmt.ExecContext(ctx, base64AccessCredentials, channelName)
 	if err != nil {
-		return err
+		errMsg := "failed to execute a prepared statement"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
 
 	if rows, err := res.RowsAffected(); err != nil || rows == 0 {
-		return errors.Join(errors.New("did not save access credentials"), err)
+		errMsg := "failed to update new access credentials to the database"
+		span.SetStatus(codes.Error, errMsg)
+		span.RecordError(err)
+		return errors.Join(errors.New(errMsg), err)
 	}
 
-	s.logger.Info("successfully updated new access credentials to database")
-
+	span.SetStatus(codes.Ok, "successfully updated new access credentials to the database")
 	return nil
 }

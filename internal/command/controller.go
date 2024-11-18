@@ -5,8 +5,13 @@ import (
 	"strings"
 
 	"github.com/gempir/go-twitch-irc/v4"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
+
+const blankSpace = " "
+
+var tracer = otel.Tracer("github.com/danielbukowski/twitch-chatbot/internal/command")
 
 // Handler represents a function for a command.
 type Handler func(ctx context.Context, args []string, chatClient chatClient) error
@@ -43,9 +48,9 @@ func NewController(prefix string, logger *zap.Logger) *Controller {
 	}
 }
 
-// CallCommand searches for a command and execute it, if find one.
+// CallCommand searches for a command in the commands. If the method finds one, it sets up a context and executes the command.
 func (c *Controller) CallCommand(ctx context.Context, userMessage string, privateMessage twitch.PrivateMessage, chatClient chatClient) {
-	args := strings.Split(userMessage, " ")
+	args := strings.Split(userMessage, blankSpace)
 	commandName := args[0]
 
 	command, ok := c.commands[commandName]
@@ -53,10 +58,17 @@ func (c *Controller) CallCommand(ctx context.Context, userMessage string, privat
 		return
 	}
 
-	ctx = setPrivateMessageToContext(ctx, &privateMessage)
+	cmdCtx := NewContext(commandName, &privateMessage, c.logger)
+	ctx = setContextToCommand(ctx, cmdCtx)
 
-	//nolint:errcheck // error is handled in a middleware called ErrorHandler
-	command(ctx, args[1:], chatClient)
+	c.logger.Info("user called a command",
+		zap.String("username", privateMessage.User.Name),
+		zap.String("user_id", privateMessage.User.ID),
+		zap.String("command_name", commandName),
+	)
+
+	//nolint:errcheck // error is handled in ErrorHandler middleware
+	_ = command(ctx, args[1:], chatClient)
 }
 
 // UseWith adds a middleware to a middlewares. The order when a middleware is added matters.
