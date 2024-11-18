@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+//nolint:gocritic
 func InitOpenTelemetrySDK(ctx context.Context, instanceID, APIToken string, isDev bool) (shutdown func(context.Context) error, err error) {
 	headers := make(map[string]string)
 	credentials := base64.StdEncoding.EncodeToString([]byte(instanceID + ":" + APIToken))
