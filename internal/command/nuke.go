@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
+	lg "github.com/danielbukowski/twitch-chatbot/internal/logger"
 	messagestorage "github.com/danielbukowski/twitch-chatbot/internal/message/storage"
 	"github.com/nicklaw5/helix/v2"
 	"go.uber.org/zap"
@@ -19,13 +19,12 @@ import (
 type NukeCommand struct {
 	messageStorage *messagestorage.MessageStorage
 	helixClient    *helix.Client
-	logger         *zap.Logger
 }
 
-func NewNuke(messageStorage *messagestorage.MessageStorage, logger *zap.Logger) *NukeCommand {
+func NewNuke(messageStorage *messagestorage.MessageStorage, helixClient *helix.Client) *NukeCommand {
 	return &NukeCommand{
 		messageStorage: messageStorage,
-		logger:         logger,
+		helixClient:    helixClient,
 	}
 }
 
@@ -43,7 +42,9 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 	unit := args[2]
 	timeoutInSeconds := 0
 
-	current := time.Now()
+	commandCtx := UnwrapContext(ctx)
+
+	// current := time.Now()
 
 	switch unit {
 	case "s":
@@ -64,13 +65,10 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 	}
 
 	messages := np.messageStorage.Messages()
-	timeouts := make(map[string]bool, len(messages)/2)
+	timeouts := make(map[string]bool, len(messages))
 
 	defer func() {
-		err := np.logger.Sync()
-		if err != nil {
-			fmt.Printf("sync method in logger threw an error: %v", err)
-		}
+		lg.Flush(commandCtx.Logger)
 	}()
 
 	// TODO: filter out vips, moderators and the broadcaster from the message
@@ -78,7 +76,7 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 
 		separatorIndex := strings.Index(message, ":")
 		if separatorIndex == -1 {
-			np.logger.Debug("got an empty message in the messages, breaking the loop", zap.Int("messageIndex", i))
+			commandCtx.Logger.Debug("got an empty message in the messages, breaking the loop", zap.Int("messageIndex", i))
 			break
 		}
 
@@ -87,14 +85,14 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 
 		_, ok := timeouts[username]
 		if ok {
-			np.logger.Debug("skipping a message, user already added to the timeouts", zap.String("username", username))
+			commandCtx.Logger.Debug("skipping a message, user already added to the timeouts", zap.String("username", username))
 			continue
 		}
 
 		isMatch := rgxp.MatchString(messageContent)
 
 		if isMatch {
-			np.logger.Debug("user's message contains the keyword, adding a user to the timeouts",
+			commandCtx.Logger.Debug("user's message contains the keyword, adding a user to the timeouts",
 				zap.String("username", username),
 				zap.String("message", messageContent))
 
@@ -106,29 +104,38 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 	// 	zap.Int("peopleToTimeout", len(timeouts)),
 	// 	zap.Int("messages", len(messages)))
 
-	users := make([]string, 0, len(timeouts))
-	for k := range timeouts {
-		users = append(users, k)
+	// users := make([]string, 0, len(timeouts))
+
+	// lets re-user the messages to avoid allocation. Why? ...
+	usersToTimeout := messages[:0]
+	for userName := range timeouts {
+		usersToTimeout = append(usersToTimeout, userName)
 	}
 
+	// You can get info about max 100 users at 1 time
 	res, err := np.helixClient.GetUsers(&helix.UsersParams{
-		Logins: users,
+		Logins: usersToTimeout,
 	})
 	if err != nil {
-		return err
+		return errors.Join(errors.New("failed to get information about twitch users"), err)
 	}
 
 	if res.ErrorStatus != 200 {
 		return errors.New("failed to get information about twitch users")
 	}
 
-	ctx, _ = context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	g, _ := errgroup.WithContext(ctx)
 
-	g.SetLimit(runtime.NumCPU())
+	maxConcurrentRequests := 20
+	g.SetLimit(maxConcurrentRequests)
 
+	//TODO: get somehow ids of my channel and chatbot
 	for _, u := range res.Data.Users {
 		g.Go(func() error {
+			// TODO: get twitch token with scope: moderator:manage:banned_users
 			_, err := np.helixClient.BanUser(&helix.BanUserParams{
 				BroadcasterID: "",
 				ModeratorId:   "",
@@ -138,28 +145,24 @@ func (np *NukeCommand) Nuke(ctx context.Context, args []string, _ chatClient) er
 					Duration: timeoutInSeconds,
 				},
 			})
-			if err != nil {
-				return err
-			}
 
-			return nil
+			return err
 		})
 	}
 
 	err = g.Wait()
-
 	if err != nil {
-		// logger here
-		// fmt.pr
-		return errors.New("failed to timeout twitch users")
+		return errors.Join(errors.New("failed to timeout twitch users"), err)
 	}
 
-	fmt.Printf("It took %v", time.Since(current))
+	// fmt.Printf("It took %v", time.Since(current))
 	// chatClient.Say(privMsg.Channel, "Done the job!")
 	return nil
 }
 
-// TODO: turn the fmt.Errorf errors to variables.
+// TODO: reword this
+
+// ValidateNukeArguments processes the passed arguments to the nuke command.
 func ValidateNukeArguments() Filter {
 	return func(cb Handler) Handler {
 		return func(ctx context.Context, args []string, chatClient chatClient) error {
